@@ -27,11 +27,11 @@ public class Client {
             byte[] buf = new byte[1024];
             log.debug("屏幕打印：{}",s);
             out.write(s.getBytes());
-            out.flush();
-            int len = in.read(buf,0,1024);
-            String s1 = new String(buf,0, len);
-            log.debug("{}",s1);
             out.close();
+//            out.flush();
+//            int len = in.read(buf,0,1024);
+//            String s1 = new String(buf,0, len);
+//            log.debug("{}",s1);
         }
     }
 }

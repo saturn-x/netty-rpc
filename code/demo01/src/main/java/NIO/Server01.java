@@ -7,10 +7,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
@@ -43,13 +41,15 @@ public class Server01 {
 
         // 5. 获取连接
         while (true) {
-            selector.select(); // 阻塞 等待感兴趣的事件到达
+            int n = selector.select(); // 阻塞 等待感兴趣的事件到达
+            log.debug("select 获取到事件的个数：{}",n);
             // 5.事件到达 获取事件集合
             Set<SelectionKey> set = selector.selectedKeys();
             Iterator<SelectionKey> iterator = set.iterator();
             while(iterator.hasNext()) {
                 // 6. 遍历集合
                 SelectionKey cur = iterator.next();
+                iterator.remove();
                 // 7.判断事件类型
                 if(cur.isAcceptable()) {
                     // 该事件为连接事件 将获取到的channel注册到selector上
@@ -64,15 +64,41 @@ public class Server01 {
                     SocketChannel sc = (SocketChannel)cur.channel();
                     log.debug("客户端{}有可读取事件",sc);
                     // 该事件为读事件 读完数据打印并返回
-                    System.out.println(readDataFromSocketChannel(sc));
-                    sc.close();
+                    readHandle(cur,selector);
                 }
-                iterator.remove();
+
             }
         }
 
     }
+    private static void readHandle(SelectionKey selectionKey, Selector selector) throws IOException {
+        // 1. 获取channel
+        SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
 
+        /**
+         * 循环读取客户端请求信息
+         */
+        StringBuilder request = new StringBuilder();
+        while (socketChannel.read(byteBuffer) > 0) {
+            /**
+             * 切换buffer为读模式
+             */
+            byteBuffer.flip();
+
+            /**
+             * 读取buffer中的内容
+             */
+            request.append(StandardCharsets.UTF_8.decode(byteBuffer));
+        }
+
+        /**
+         * 将channel再次注册到selector上，监听他的可读事件
+         */
+        socketChannel.register(selector, SelectionKey.OP_READ);
+
+        log.debug("从{}：获取消息：{}", socketChannel.socket(),request.toString());
+    }
     private static String readDataFromSocketChannel(SocketChannel sChannel) throws IOException {
 
         ByteBuffer buffer = ByteBuffer.allocate(1024);
@@ -81,7 +107,9 @@ public class Server01 {
         while (true) {
 
             buffer.clear();
+            log.debug("服务器使用read读取···");
             int n = sChannel.read(buffer);
+            log.debug("服务器使用read读取完毕，长度:{}···",n);
             if (n == -1) {
                 break;
             }

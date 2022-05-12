@@ -5,6 +5,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>demo01</module>
+        <module>SimpleCode</module>
     </modules>
     <groupId>com.rpc</groupId>
     <artifactId>netty-rpc</artifactId>
